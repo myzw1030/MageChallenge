@@ -5,10 +5,11 @@ struct ContentView: View {
     @State private var ballPosition: CGPoint = .zero
     @State private var goalReached = false
     
+    
     private let motionManager = CMMotionManager()
     private let diameter: CGFloat = 15
     private let mazeData: [[Int]] = [
-        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
         [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0],
         [0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1],
         [0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
@@ -19,8 +20,8 @@ struct ContentView: View {
         [1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
         [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1],
         [0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-        [0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0],
-        [0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0],
         [0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0],
         [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1],
         [1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
@@ -40,22 +41,69 @@ struct ContentView: View {
     init() {
         // ゴールの位置を初期化
         goalPosition = findGoalPosition()
+        
     }
 
+    // ゴールの位置
     private func findGoalPosition() -> CGPoint {
-        var goalRow = 0
-        var goalColumn = 0
+        let start = findStartPositionInMaze() // スタート位置を初期位置とする
+        var visited = Array(repeating: Array(repeating: false, count: mazeData[0].count), count: mazeData.count)
+        visited[start.0][start.1] = true
 
+        let longestPath = dfs(start: start, visited: &visited, currentPath: [start])
+        let goal = longestPath.last! // 最も遠い点がゴール
+
+        return CGPoint(x: CGFloat(goal.1) * blockSize + blockSize / 2, y: CGFloat(goal.0) * blockSize + blockSize / 2)
+    }
+
+    private func findStartPositionInMaze() -> (Int, Int) {
         for (row, rowData) in mazeData.enumerated() {
             for (column, value) in rowData.enumerated() {
-                if value == 0 {
-                    goalRow = row
-                    goalColumn = column
+                if value == 2 {
+                    return (row, column)
                 }
             }
         }
 
-        return CGPoint(x: CGFloat(goalColumn) * blockSize + blockSize / 2, y: CGFloat(goalRow) * blockSize + blockSize / 2)
+        // デフォルトのスタート位置は(0, 0)
+        return (0, 0)
+    }
+    
+    // 深さ優先探索（DFS）を実装
+    private func dfs(start: (Int, Int), visited: inout [[Bool]], currentPath: [(Int, Int)]) -> [(Int, Int)] {
+        let directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        var longestPath = currentPath
+        
+        for direction in directions {
+            let newRow = start.0 + direction.0
+            let newCol = start.1 + direction.1
+
+            // 範囲内か、まだ訪れていない通路か確認
+            if newRow >= 0 && newRow < mazeData.count && newCol >= 0 && newCol < mazeData[0].count && mazeData[newRow][newCol] == 0 && !visited[newRow][newCol] {
+                visited[newRow][newCol] = true
+                let newPath = dfs(start: (newRow, newCol), visited: &visited, currentPath: currentPath + [(newRow, newCol)])
+
+                // 最も長い経路を更新
+                if newPath.count > longestPath.count {
+                    longestPath = newPath
+                }
+            }
+        }
+        
+        return longestPath
+    }
+    
+    private func startMotionManager(geometry: GeometryProxy, xOffset: CGFloat, yOffset: CGFloat) {
+        // ボールの初期位置を迷路の通路（値が0の部分）の端にする
+        ballPosition = findStartPosition()
+
+        // モーションマネージャーを開始する
+        self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
+    }
+
+    private func stopMotionManager() {
+        // モーションマネージャーを停止する
+        motionManager.stopAccelerometerUpdates()
     }
 
 
@@ -71,14 +119,19 @@ struct ContentView: View {
                 let yOffset = (geometry.size.height - CGFloat(rows) * blockSize) / 2
                 let verticalOffset = geometry.size.height - CGFloat(rows) * blockSize
 
+                let startRow = 0
+                let startColumn = 0
                 ForEach(0..<rows, id: \.self) { row in
                     let columns = mazeData[row].count
                     let padding = (maxColumns - columns) / 2
                     ForEach(0..<columns, id: \.self) { col in
                         Rectangle()
-                            .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green : mazeData[row][col] == 0 ? Color.clear : Color.black)
+                            .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green
+                                : mazeData[row][col] == 2 ? Color.yellow
+                                : mazeData[row][col] == 0 ? Color.clear : Color.black)
                             .frame(width: blockSize, height: blockSize)
-                            .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2 + verticalOffset)}
+                            .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2 + verticalOffset)
+                    }
                 }
 
                 // ボールを表示
@@ -87,15 +140,10 @@ struct ContentView: View {
                     .foregroundColor(.red)
                     .position(x: xOffset + ballPosition.x, y: yOffset + ballPosition.y + verticalOffset)
                     .onAppear {
-                        // ボールの初期位置を迷路の通路（値が0の部分）の端にする
-                        ballPosition = findStartPosition()
-
-                        // モーションマネージャーを開始する
-                        self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
+                        startMotionManager(geometry: geometry, xOffset: xOffset, yOffset: yOffset)
                     }
                     .onDisappear {
-                        // モーションマネージャーを停止する
-                        motionManager.stopAccelerometerUpdates()
+                        stopMotionManager()
                     }
                     .alert(isPresented: $goalReached) {
                         Alert(title: Text("おめでとうございます！"), message: Text("ゴールに到達しました！"), dismissButton: .default(Text("OK")) {
@@ -115,31 +163,15 @@ struct ContentView: View {
     }
     // ボールの初期位置を画面の端にする
     private func findStartPosition() -> CGPoint {
-        let cornerPositions: [(row: Int, column: Int)] = [
-            (0, 0),                                      // 左上
-            (0, mazeData[0].count - 1),                  // 右上
-            (mazeData.count - 1, 0),                     // 左下
-            (mazeData.count - 1, mazeData[0].count - 1)  // 右下
-        ]
-
-        for cornerPosition in cornerPositions {
-            let row = cornerPosition.row
-            let column = cornerPosition.column
-            if mazeData[row][column] == 0 {
-                return CGPoint(x: CGFloat(column) * blockSize + blockSize / 2, y: CGFloat(row) * blockSize + blockSize / 2)
-            }
-        }
-
-        // すべての角が壁である場合、最初の通路を探す
         for (row, rowData) in mazeData.enumerated() {
             for (column, value) in rowData.enumerated() {
-                if value == 0 {
+                if value == 2 {
                     return CGPoint(x: CGFloat(column) * blockSize + blockSize / 2, y: CGFloat(row) * blockSize + blockSize / 2)
                 }
             }
         }
 
-        // デフォルトの位置を返す（すべてのセルが壁である場合）
+        // 2が見つからない場合のデフォルトの位置
         return .zero
     }
 
