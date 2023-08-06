@@ -6,6 +6,10 @@ struct ContentView: View {
     @State private var goalReached = false
     @State private var ballHitWall = false // ゲームオーバーフラグ
     
+    @State private var gameTime: Double = 0.0
+    @State private var gameTimer: Timer? = nil
+    @State private var gameStarted: Bool = false
+    
     enum GameAlert: Identifiable {
         case goalReached, ballHitWall
 
@@ -23,30 +27,6 @@ struct ContentView: View {
     
     private let motionManager = CMMotionManager()
     private let diameter: CGFloat = 15
-    private let mazeData: [[Int]] = [
-        [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0],
-        [0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1],
-        [0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-        [0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-        [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-        [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1],
-        [1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
-        [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1],
-        [0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-        [0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0],
-        [0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0],
-        [0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0],
-        [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-        [1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-        [0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0],
-        [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-    ]
-
 
     private var blockSize: CGFloat {
         min(UIScreen.main.bounds.width / CGFloat(mazeData[0].count), UIScreen.main.bounds.height / CGFloat(mazeData.count))
@@ -59,9 +39,18 @@ struct ContentView: View {
     }
     
     var body: some View {
+        
         GeometryReader { geometry in
+
             ZStack {
                 Color.white
+                VStack {
+                    Text("\(gameTime, specifier: "%.1f")")
+                        .font(.largeTitle)
+                        .foregroundColor(Color.black)
+                        .padding()
+                    Spacer()
+                }
                 // 迷路を表示
                 let rows = mazeData.count
                 let maxColumns = mazeData.reduce(0) { max($0, $1.count) }
@@ -97,10 +86,11 @@ struct ContentView: View {
                     .alert(item: $currentAlert) { alertType in
                         switch alertType {
                         case .goalReached:
-                            return Alert(title: Text("おめでとうございます！"), message: Text("ゴールに到達しました！"), dismissButton: .default(Text("OK")) {
+                            return Alert(title: Text("おめでとうございます！ゴールに到達しました！"), message: Text("もう一度やりますか？"), dismissButton: .default(Text("はい")) {
                                 // ボールの位置を初期位置に戻し、ゴール到達状態をリセット。
                                 ballPosition = findStartPosition()
                                 currentAlert = nil
+                                gameStarted = false // ゲームの再開準備
                                 //DispatchQueueを使ってアクセラロメーターアップデートを少し遅らせて再開。
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                     self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
@@ -111,6 +101,7 @@ struct ContentView: View {
                                 // ボールの位置を初期位置に戻す
                                 ballPosition = findStartPosition()
                                 currentAlert = nil
+                                gameStarted = false // ゲームの再開準備
                                 // モーションマネージャーを再開する
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                     self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
@@ -123,6 +114,7 @@ struct ContentView: View {
   
         }
     }
+    
     // ボールの初期位置を画面の端にする
     private func findStartPosition() -> CGPoint {
         for (row, rowData) in mazeData.enumerated() {
@@ -154,10 +146,11 @@ struct ContentView: View {
         let newCol = Int(newX / blockSize)
         let newRow = Int(newY / blockSize)
 
-        if mazeData[newRow][newCol] == 1 { // hit the wall
-            motionManager.stopAccelerometerUpdates() // Stop the motion manager
+        if mazeData[newRow][newCol] == 1 {
+            motionManager.stopAccelerometerUpdates()
             ballHitWall = true
-            currentAlert = .ballHitWall  // Add this line
+            currentAlert = .ballHitWall
+            stopTimer()
         } else {
             // 画面の外に出ないようにする
             if newX > radius && newX < geometry.size.width - radius - 2 * xOffset {
@@ -174,7 +167,13 @@ struct ContentView: View {
 
                 // ゴールに到達したときに `goalReached` を trueに設定。
                 goalReached = true
-                currentAlert = .goalReached  // Update this line
+                currentAlert = .goalReached
+                stopTimer()
+            }
+
+            if !gameStarted {
+                startTimer()
+                gameStarted = true
             }
         }
     }
@@ -246,6 +245,18 @@ struct ContentView: View {
     private func stopMotionManager() {
         // モーションマネージャーを停止する
         motionManager.stopAccelerometerUpdates()
+    }
+    
+    private func startTimer() {
+        gameTime = 0.0 // タイマーをリセット
+        gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            gameTime += 0.1
+        }
+    }
+
+    private func stopTimer() {
+        gameTimer?.invalidate()
+        gameTimer = nil
     }
 
 }

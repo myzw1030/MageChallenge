@@ -12,6 +12,7 @@
 		DA3224C72A7E1042001828A4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA3224C62A7E1042001828A4 /* Assets.xcassets */; };
 		DA3224CA2A7E1042001828A4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA3224C92A7E1042001828A4 /* Preview Assets.xcassets */; };
 		DA3224D12A7E9235001828A4 /* MazeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3224D02A7E9235001828A4 /* MazeView.swift */; };
+		DA3224D62A7F7507001828A4 /* MazeData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3224D52A7F7507001828A4 /* MazeData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +22,8 @@
 		DA3224C62A7E1042001828A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DA3224C92A7E1042001828A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		DA3224D02A7E9235001828A4 /* MazeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeView.swift; sourceTree = "<group>"; };
+		DA3224D22A7F7140001828A4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		DA3224D52A7F7507001828A4 /* MazeData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MazeData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +56,9 @@
 		DA3224C12A7E103F001828A4 /* MageChallenge */ = {
 			isa = PBXGroup;
 			children = (
+				DA3224D22A7F7140001828A4 /* Info.plist */,
 				DA3224C22A7E103F001828A4 /* MageChallengeApp.swift */,
+				DA3224D52A7F7507001828A4 /* MazeData.swift */,
 				DA3224C42A7E103F001828A4 /* ContentView.swift */,
 				DA3224D02A7E9235001828A4 /* MazeView.swift */,
 				DA3224C62A7E1042001828A4 /* Assets.xcassets */,
@@ -140,6 +145,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DA3224D62A7F7507001828A4 /* MazeData.swift in Sources */,
 				DA3224D12A7E9235001828A4 /* MazeView.swift in Sources */,
 				DA3224C52A7E103F001828A4 /* ContentView.swift in Sources */,
 				DA3224C32A7E103F001828A4 /* MageChallengeApp.swift in Sources */,
@@ -274,6 +280,7 @@
 				DEVELOPMENT_TEAM = W5743BPVXV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MageChallenge/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -303,6 +310,7 @@
 				DEVELOPMENT_TEAM = W5743BPVXV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MageChallenge/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
