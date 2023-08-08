@@ -47,18 +47,17 @@ struct GameView: View {
         
         GeometryReader { geometry in
             
-            
-            
             ZStack {
                 Color.white
-                VStack {
-                    Text("\(gameTime, specifier: "%.1f")")
-                        .font(.largeTitle)
-                        .foregroundColor(Color.black)
-                        .padding()
-//                        .frame(maxWidth: .infinity, alignment: .top)
-                    Spacer()
-                }
+//                VStack {
+//                    Spacer()
+//                    Text("\(gameTime, specifier: "%.1f")")
+//                        .font(.largeTitle)
+//                        .foregroundColor(Color.black)
+//                        .padding()
+////                        .frame(maxWidth: .infinity, alignment: .top)
+//                    Spacer()
+//                }
                 // 迷路を表示
                 let rows = mazeData.count
                 let maxColumns = mazeData.reduce(0) { max($0, $1.count) }
@@ -66,6 +65,14 @@ struct GameView: View {
                 let xOffset = (geometry.size.width - CGFloat(maxColumns) * blockSize) / 2
                 let yOffset = (geometry.size.height - CGFloat(rows) * blockSize) / 2
                 let verticalOffset = geometry.size.height - CGFloat(rows) * blockSize
+                
+                let mazeHeight = CGFloat(rows) * blockSize // 迷路の縦の大きさ
+                let textYPosition = geometry.size.height - mazeHeight
+
+                Text("\(gameTime, specifier: "%.1f")")
+                    .font(.largeTitle)
+                    .foregroundColor(Color.black)
+                    .position(x: geometry.size.width / 2, y: textYPosition)
 
                 ForEach(0..<rows, id: \.self) { row in
                     let columns = mazeData[row].count
@@ -161,7 +168,7 @@ struct GameView: View {
 
         let newCol = Int(newX / blockSize)
         let newRow = Int(newY / blockSize)
-        let adjustedRadius = radius - 1.5
+        let adjustedRadius = radius - 1.7
 
         let rightCol = min(Int((newX + adjustedRadius) / blockSize), mazeData[0].count - 1)
         let leftCol = max(Int((newX - adjustedRadius) / blockSize), 0)
