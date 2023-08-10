@@ -12,7 +12,8 @@ struct GameView: View {
     @State private var gameTime: Double = 0.0
     @State private var gameTimer: Timer? = nil
     @State private var gameStarted: Bool = false
-    
+    @State private var textSize: CGSize = CGSize(width: 0, height: 0)
+    @State private var yOffset: CGFloat = 0
     
     
     enum GameAlert: Identifiable {
@@ -46,92 +47,103 @@ struct GameView: View {
     var body: some View {
         
         GeometryReader { geometry in
+            let rows = mazeData.count // 迷路の行数。
+            let maxColumns = mazeData.reduce(0) { max($0, $1.count) } // 迷路の最大列数
+            let blockSize = min(geometry.size.width / CGFloat(maxColumns), geometry.size.height / CGFloat(rows)) // マスのサイズ
+            let xOffset = (geometry.size.width - CGFloat(maxColumns) * blockSize) / 2 // 迷路を画面の中央に配置するための水平方向のオフセット
+            // textSizeの高さを考慮してyOffsetを調整
+            // yOffsetの計算をlazy変数として定義
+            lazy var yOffset: CGFloat = geometry.size.height - CGFloat(rows) * blockSize - textSize.height
             
-            ZStack {
-                Color.white
-//                VStack {
-//                    Spacer()
-//                    Text("\(gameTime, specifier: "%.1f")")
-//                        .font(.largeTitle)
-//                        .foregroundColor(Color.black)
-//                        .padding()
-////                        .frame(maxWidth: .infinity, alignment: .top)
-//                    Spacer()
-//                }
-                // 迷路を表示
-                let rows = mazeData.count
-                let maxColumns = mazeData.reduce(0) { max($0, $1.count) }
-                let blockSize = min(geometry.size.width / CGFloat(maxColumns), geometry.size.height / CGFloat(rows))
-                let xOffset = (geometry.size.width - CGFloat(maxColumns) * blockSize) / 2
-                let yOffset = (geometry.size.height - CGFloat(rows) * blockSize) / 2
-                let verticalOffset = geometry.size.height - CGFloat(rows) * blockSize
-                
-                let mazeHeight = CGFloat(rows) * blockSize // 迷路の縦の大きさ
-                let textYPosition = geometry.size.height - mazeHeight
-
+    
+            
+            VStack {
+                // タイマー表示
                 Text("\(gameTime, specifier: "%.1f")")
                     .font(.largeTitle)
                     .foregroundColor(Color.black)
-                    .position(x: geometry.size.width / 2, y: textYPosition)
+                    .background(
+                        GeometryReader { textGeometry in
+                            Color.clear.onAppear {
+                                textSize = textGeometry.size
+                                yOffset = geometry.size.height - CGFloat(rows) * blockSize - textSize.height
+                                print("Text size: \(textSize.height)")
+                                print("rows: \(rows)")
+                                print("yOffset: \(yOffset)")
+                                print("blockSize: \(blockSize)")
+                                print("geometry.size.height: \(geometry.size.height)")
+                            }
+                        }
+                    )
 
-                ForEach(0..<rows, id: \.self) { row in
-                    let columns = mazeData[row].count
-                    let padding = (maxColumns - columns) / 2
-                    ForEach(0..<columns, id: \.self) { col in
-                        Rectangle()
-                            .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green
-                                : mazeData[row][col] == 2 ? Color.yellow
-                                : mazeData[row][col] == 0 ? Color.clear : Color.black)
-                            .frame(width: blockSize, height: blockSize)
-                            .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2 + verticalOffset)
-                    }
-                }
 
-                // ボールを表示
-                Circle()
-                    .frame(width: diameter, height: diameter)
-                    .foregroundColor(.red)
-                    .position(x: xOffset + ballPosition.x, y: yOffset + ballPosition.y + verticalOffset)
-                    .onAppear {
-                        startMotionManager(geometry: geometry, xOffset: xOffset, yOffset: yOffset)
-                    }
-                    .onDisappear {
-                        stopMotionManager()
-                    }
-                    .alert(item: $currentAlert) { alertType in
-                        switch alertType {
-                        case .goalReached:
-                            return Alert(title: Text("おめでとうございます！\nゴールに到達しました！"), message: Text("もう一度やりますか？"), primaryButton: .default(Text("はい")) {
-                                // ボールの位置を初期位置に戻し、ゴール到達状態をリセット。
-                                ballPosition = findStartPosition()
-                                currentAlert = nil
-                                gameStarted = false // ゲームの再開準備
-                                //DispatchQueueを使ってアクセラロメーターアップデートを少し遅らせて再開。
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
-                                }
-                            }, secondaryButton: .destructive(Text("いいえ")) {
-                                // 「いいえ」を選んだ場合、初期画面に戻る
-                                dismiss()
-                            })
-                        case .ballHitWall:
-                            return Alert(title: Text("ゲームオーバー"), message: Text("もう一度やりますか？"), primaryButton: .default(Text("はい")) {
-                                // ボールの位置を初期位置に戻す
-                                ballPosition = findStartPosition()
-                                currentAlert = nil
-                                gameStarted = false // ゲームの再開準備
-                                // モーションマネージャーを再開する
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
-                                }
-                            }, secondaryButton: .destructive(Text("いいえ")) {
-                                // 「いいえ」を選んだ場合、初期画面に戻る
-                                dismiss()
-                                
-                            })
+                ZStack {
+                    Color.white
+                    
+                    // 迷路を表示
+                    ForEach(0..<rows, id: \.self) { row in
+                        let columns = mazeData[row].count
+                        let padding = (maxColumns - columns) / 2
+                        ForEach(0..<columns, id: \.self) { col in
+                            Rectangle()
+                                .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green
+                                    : mazeData[row][col] == 2 ? Color.yellow
+                                    : mazeData[row][col] == 0 ? Color.clear : Color.black)
+                                .frame(width: blockSize, height: blockSize)
+                                .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2)
+                            
+                            
                         }
                     }
+
+                    // ボールを表示
+                    Circle()
+                        .frame(width: diameter, height: diameter)
+                        .foregroundColor(.red)
+                        .position(x: xOffset + ballPosition.x, y: yOffset + ballPosition.y)
+                        .onAppear {
+                            startMotionManager(geometry: geometry, xOffset: xOffset, yOffset: yOffset)
+                        }
+                        .onDisappear {
+                            stopMotionManager()
+                        }
+                        .alert(item: $currentAlert) { alertType in
+                            switch alertType {
+                            case .goalReached:
+                                return Alert(title: Text("おめでとうございます！\nゴールに到達しました！"), message: Text("もう一度やりますか？"), primaryButton: .default(Text("はい")) {
+                                    // ボールの位置を初期位置に戻し、ゴール到達状態をリセット。
+                                    ballPosition = findStartPosition()
+                                    currentAlert = nil
+                                    gameStarted = false // ゲームの再開準備
+                                    //DispatchQueueを使ってアクセラロメーターアップデートを少し遅らせて再開。
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
+                                    }
+                                }, secondaryButton: .destructive(Text("いいえ")) {
+                                    // 「いいえ」を選んだ場合、初期画面に戻る
+                                    dismiss()
+                                })
+                            case .ballHitWall:
+                                return Alert(title: Text("ゲームオーバー"), message: Text("もう一度やりますか？"), primaryButton: .default(Text("はい")) {
+                                    // ボールの位置を初期位置に戻す
+                                    ballPosition = findStartPosition()
+                                    currentAlert = nil
+                                    gameStarted = false // ゲームの再開準備
+                                    // モーションマネージャーを再開する
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        self.resumeAccelerometerUpdates(in: geometry, xOffset: xOffset, yOffset: yOffset)
+                                    }
+                                }, secondaryButton: .destructive(Text("いいえ")) {
+                                    // 「いいえ」を選んだ場合、初期画面に戻る
+                                    dismiss()
+                                    
+                                })
+                            }
+                        }
+                }
             }
+            
+
             .ignoresSafeArea(edges: [.all])
             .navigationBarBackButtonHidden(true)
   
