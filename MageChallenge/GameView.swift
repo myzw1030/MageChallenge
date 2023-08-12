@@ -32,7 +32,7 @@ struct GameView: View {
     @State private var currentAlert: GameAlert?
     
     private let motionManager = CMMotionManager()
-    private let diameter: CGFloat = 14
+    private let diameter: CGFloat = 13
 
     private var blockSize: CGFloat {
         min(UIScreen.main.bounds.width / CGFloat(mazeData[0].count), UIScreen.main.bounds.height / CGFloat(mazeData.count))
@@ -47,43 +47,39 @@ struct GameView: View {
     var body: some View {
         
         GeometryReader { geometry in
+
             let rows = mazeData.count // 迷路の行数。
             let maxColumns = mazeData.reduce(0) { max($0, $1.count) } // 迷路の最大列数
             let blockSize = min(geometry.size.width / CGFloat(maxColumns), geometry.size.height / CGFloat(rows)) // マスのサイズ
             let xOffset = (geometry.size.width - CGFloat(maxColumns) * blockSize) / 2 // 迷路を画面の中央に配置するための水平方向のオフセット
-            // textSizeの高さを考慮してyOffsetを調整
-            // yOffsetの計算をlazy変数として定義
-            lazy var yOffset: CGFloat = geometry.size.height - CGFloat(rows) * blockSize - textSize.height
+
+            let mazeTotalHeight = CGFloat(rows) * blockSize
+            let yOffset = (geometry.size.height - CGFloat(rows) * blockSize) / 2 // 画面の中央に迷路を配置
             
-    
-            
-            VStack {
+            VStack() {
+//                Spacer()
                 // タイマー表示
                 Text("\(gameTime, specifier: "%.1f")")
                     .font(.largeTitle)
-                    .foregroundColor(Color.black)
-                    .background(
-                        GeometryReader { textGeometry in
-                            Color.clear.onAppear {
-                                textSize = textGeometry.size
-                                yOffset = geometry.size.height - CGFloat(rows) * blockSize - textSize.height
-                                print("Text size: \(textSize.height)")
-                                print("rows: \(rows)")
-                                print("yOffset: \(yOffset)")
-                                print("blockSize: \(blockSize)")
-                                print("geometry.size.height: \(geometry.size.height)")
-                            }
-                        }
-                    )
-
+                    .foregroundColor(Color.white)
+//                    .position(x: geometry.size.width / 2, y: (geometry.size.height - mazeTotalHeight) / 2).onAppear{
+//                        print("rows: \(rows), maxColumns: \(maxColumns), blockSize: \(blockSize), mazeTotalHeight: \(mazeTotalHeight)")
+//                    }
+//                Spacer()
+                
+                
 
                 ZStack {
+                    
                     Color.white
+                        .frame(height: mazeTotalHeight)
+                        .position(x: geometry.size.width / 2, y: yOffset + mazeTotalHeight / 2)
                     
                     // 迷路を表示
                     ForEach(0..<rows, id: \.self) { row in
                         let columns = mazeData[row].count
                         let padding = (maxColumns - columns) / 2
+                        
                         ForEach(0..<columns, id: \.self) { col in
                             Rectangle()
                                 .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green
@@ -91,7 +87,6 @@ struct GameView: View {
                                     : mazeData[row][col] == 0 ? Color.clear : Color.black)
                                 .frame(width: blockSize, height: blockSize)
                                 .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2)
-                            
                             
                         }
                     }
@@ -148,6 +143,7 @@ struct GameView: View {
             .navigationBarBackButtonHidden(true)
   
         }
+        .background(Color.black)
     }
     
     // ボールの初期位置を画面の端にする
