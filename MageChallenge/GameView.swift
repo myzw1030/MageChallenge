@@ -56,38 +56,34 @@ struct GameView: View {
             let mazeTotalHeight = CGFloat(rows) * blockSize
             let yOffset = (geometry.size.height - CGFloat(rows) * blockSize) / 2 // 画面の中央に迷路を配置
             
-            VStack() {
-//                Spacer()
+            VStack(spacing: 0) {
                 // タイマー表示
+                Spacer()
                 Text("\(gameTime, specifier: "%.1f")")
                     .font(.largeTitle)
                     .foregroundColor(Color.white)
-//                    .position(x: geometry.size.width / 2, y: (geometry.size.height - mazeTotalHeight) / 2).onAppear{
-//                        print("rows: \(rows), maxColumns: \(maxColumns), blockSize: \(blockSize), mazeTotalHeight: \(mazeTotalHeight)")
-//                    }
-//                Spacer()
-                
-                
+//                    .background(Color.blue)
+                    .padding(0)
+
 
                 ZStack {
-                    
                     Color.white
-                        .frame(height: mazeTotalHeight)
-                        .position(x: geometry.size.width / 2, y: yOffset + mazeTotalHeight / 2)
+                        .frame(width: CGFloat(maxColumns) * blockSize, height: mazeTotalHeight)
+                        .position(x: geometry.size.width / 2, y:  mazeTotalHeight / 2)
                     
                     // 迷路を表示
                     ForEach(0..<rows, id: \.self) { row in
                         let columns = mazeData[row].count
                         let padding = (maxColumns - columns) / 2
-                        
+
                         ForEach(0..<columns, id: \.self) { col in
                             Rectangle()
                                 .fill((row, col) == (Int(goalPosition.y / blockSize), Int(goalPosition.x / blockSize)) ? Color.green
                                     : mazeData[row][col] == 2 ? Color.yellow
                                     : mazeData[row][col] == 0 ? Color.clear : Color.black)
                                 .frame(width: blockSize, height: blockSize)
-                                .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: yOffset + CGFloat(row) * blockSize + blockSize / 2)
-                            
+                                .position(x: xOffset + CGFloat(col + padding) * blockSize + blockSize / 2, y: CGFloat(row) * blockSize + blockSize / 2)
+
                         }
                     }
 
@@ -95,7 +91,7 @@ struct GameView: View {
                     Circle()
                         .frame(width: diameter, height: diameter)
                         .foregroundColor(.red)
-                        .position(x: xOffset + ballPosition.x, y: yOffset + ballPosition.y)
+                        .position(x: xOffset + ballPosition.x, y: ballPosition.y)
                         .onAppear {
                             startMotionManager(geometry: geometry, xOffset: xOffset, yOffset: yOffset)
                         }
@@ -131,11 +127,14 @@ struct GameView: View {
                                 }, secondaryButton: .destructive(Text("いいえ")) {
                                     // 「いいえ」を選んだ場合、初期画面に戻る
                                     dismiss()
-                                    
+
                                 })
                             }
                         }
                 }
+                .frame(height: mazeTotalHeight)
+//                .background(Color.yellow)
+                
             }
             
 
